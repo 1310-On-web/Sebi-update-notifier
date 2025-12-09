@@ -2,8 +2,11 @@ name: SEBI hourly scraper
 
 on:
   schedule:
-    - cron: '0 * * * *'   # every hour at minute 0 (UTC). Adjust if you want offset.
+    - cron: '0 * * * *'   # every hour at minute 0 (UTC)
   workflow_dispatch:
+
+permissions:
+  contents: write   # allows pushing CSV updates on schedule
 
 concurrency:
   group: sebi-hourly
@@ -11,19 +14,20 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest   # use ubuntu-22.04 if any 24.04 dependency issues occur
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Cache pip
+      - name: Cache pip packages
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
@@ -31,38 +35,41 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies (pip)
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install playwright
-      # Install Playwright browsers (faster via playwright-github-action)
-      - name: Setup Playwright browsers
-        uses: microsoft/playwright-github-action@v1
-        with:
-          # this installs browsers and needed deps
-          install: 'chromium,firefox,webkit'
+          # install modern Playwright compatible with Ubuntu 24.04
+          pip install "playwright>=1.45.0"
+
+      - name: Install Playwright browsers and system dependencies
+        run: |
+          python -m playwright install --with-deps
 
       - name: Run SEBI scraper script
         env:
-          # If your script needs any secrets or envs add here (e.g., LOG_LEVEL)
           PYTHONUNBUFFERED: 1
         run: |
-          # make sure the script is executable or call python
+          echo "Running SEBI scraper..."
           python sebi_update_and_download_missing.py
           echo "Script finished with exit code $?"
 
-      - name: Commit CSV if changed
+      - name: Commit and push CSV if changed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add and commit only if the CSV changed
           git add sebi_circulars_last10_with_pdfs.csv || true
+
           if ! git diff --cached --quiet; then
+            echo "Detected CSV changes, committing..."
+            git pull --rebase origin "${{ github.ref_name }}" || true
             git commit -m "chore: update SEBI CSV (scheduled run) [skip ci]" || true
             git push origin HEAD:${{ github.ref_name }}
-            echo "Committed updated CSV."
+            echo "✅ Committed updated CSV."
           else
             echo "No CSV changes to commit."
           fi
