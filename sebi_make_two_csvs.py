@@ -21,16 +21,28 @@ NEW_CSV = "new_entries.csv"
 CSV_DELIM = "|"
 
 # Helpers
+import re
 def safe_filename(s: str, fallback: str = "document"):
-    s = (s or "").strip().replace("\n", " ").replace("\r", " ")
-    s = re.sub(r"[\/\\\:\*\?\"<>\|]+", "_", s)
-    s = re.sub(r"\s+", " ", s)
+    """
+    Return a sanitized filename that ends with .pdf and has no invalid SharePoint/Windows characters.
+    Truncates to a safe length.
+    """
     if not s:
-        return fallback + ".pdf"
-    name = s[:180]
-    if not name.lower().endswith(".pdf"):
-        name = name + ".pdf"
-    return name
+        s = fallback
+    # Normalize whitespace
+    s = s.strip().replace("\r", " ").replace("\n", " ")
+    # Remove characters not allowed in file names
+    s = re.sub(r'[\/\\\:\*\?"<>\|]+', '_', s)
+    # Collapse multiple spaces
+    s = re.sub(r'\s+', ' ', s)
+    # Truncate to a safe length (leave room for ".pdf")
+    max_base = 150
+    base = s[:max_base].strip()
+    # Ensure .pdf suffix
+    if not base.lower().endswith('.pdf'):
+        base = base + '.pdf'
+    return base
+
 
 def make_id(date, title, link):
     base = f"{date}|{title}|{link}"
@@ -135,13 +147,43 @@ def load_master_csv(path):
             results.append(r)
     return results
 
-def write_csv(path, rows):
+import csv
+
+def write_csv(path: str, rows: list):
+    """
+    Write rows (list of dicts) to CSV using '|' delimiter, no BOM, LF line endings,
+    and minimal quoting. Ensures file is plain text (no extra surrounding quotes).
+    """
     headers = ["id","date","title","link","pdf_link","pdf_filename","pdf_downloaded","created_at","source_commit"]
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=headers, delimiter=CSV_DELIM)
-        w.writeheader()
+    # Open with newline='' to let csv module manage line endings (it will write '\r\n' by default on Windows,
+    # but on Linux runners it will write '\n'. To force '\n', we can post-process if required.)
+    with open(path, "w", newline='', encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=headers,
+            delimiter='|',
+            quoting=csv.QUOTE_MINIMAL,
+            escapechar='\\'
+        )
+        writer.writeheader()
         for r in rows:
-            w.writerow(r)
+            # Convert any None to empty string to avoid 'None' text
+            safe_row = {k: ("" if r.get(k) is None else str(r.get(k))) for k in headers}
+            # Ensure pdf_filename has no newlines or extraneous quotes
+            safe_row['pdf_filename'] = safe_filename(safe_row.get('pdf_filename', ''), fallback='document.pdf')
+            writer.writerow(safe_row)
+
+    # Force LF-only newlines (useful if running on Windows runner and you want consistent '\n' on GitHub)
+    # This step is optional; if your runner is linux, csv module already used '\n'.
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        data = data.replace(b'\r\n', b'\n')
+        with open(path, "wb") as f:
+            f.write(data)
+    except Exception:
+        # if anything goes wrong here, ignore; file already written
+        pass
 
 def main():
     with sync_playwright() as p:
