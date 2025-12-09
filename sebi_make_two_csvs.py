@@ -172,7 +172,7 @@ def main():
         new_entries = []
 
         for e in entries:
-            date = e.get("date"] or ""
+            date = e.get("date") or ""
             title = e.get("title") or ""
             link = e.get("link") or ""
             title_key = title.strip().lower()
