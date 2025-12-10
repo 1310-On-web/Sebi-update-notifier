@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": "f9ec7505581f516120a8264821baf9e8a63f382a",
+    "date": "Dec 08, 2025",
+    "title": "Clarification on the Digital Accessibility circulars of SEBI",
+    "link": "https://www.sebi.gov.in/legal/circulars/dec-2025/clarification-on-the-digital-accessibility-circulars-of-sebi_98238.html",
+    "pdf_link": "https://www.sebi.gov.in/web/?file=https://www.sebi.gov.in/sebi_data/attachdocs/dec-2025/1765194149704.pdf",
+    "pdf_filename": "Clarification on the Digital Accessibility circulars of SEBI.pdf",
+    "pdf_downloaded": "no",
+    "created_at": "2025-12-10T06:04:14Z",
+    "source_commit": ""
+  },
+  {
+    "id": "5b3344015c25ddf23a8cd0ff78e13aa742a53bb8",
+    "date": "Nov 28, 2025",
+    "title": "Reclassification of Real Estate Investment Trusts (REITs) as equity related instruments for facilitating enhanced participation by Mutual Funds and Specialized Investment Funds (SIFs)",
+    "link": "https://www.sebi.gov.in/legal/circulars/nov-2025/reclassification-of-real-estate-investment-trusts-reits-as-equity-related-instruments-for-facilitating-enhanced-participation-by-mutual-funds-and-specialized-investment-funds-sifs-_98031.html",
+    "pdf_link": "https://www.sebi.gov.in/web/?file=https://www.sebi.gov.in/sebi_data/attachdocs/nov-2025/1764328394148.pdf",
+    "pdf_filename": "Reclassification of Real Estate Investment Trusts (REITs) as equity related instruments for facilitating enhanced participation by Mutual Funds and Sp.pdf",
+    "pdf_downloaded": "no",
+    "created_at": "2025-12-10T06:04:27Z",
+    "source_commit": ""
+  }
+]
