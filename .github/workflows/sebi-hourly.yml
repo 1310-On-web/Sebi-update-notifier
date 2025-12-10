@@ -2,7 +2,7 @@ name: SEBI hourly scraper
 
 on:
   schedule:
-    - cron: '0 * * * *'   # every hour at minute 0 (UTC)
+    - cron: '30 2,6,10 * * *'   # 08:00, 12:00, 16:00 IST
   workflow_dispatch:
 
 permissions:
