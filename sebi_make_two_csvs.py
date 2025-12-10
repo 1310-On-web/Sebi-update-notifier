@@ -246,6 +246,7 @@ def main():
                 detail_page.goto(link, wait_until="networkidle", timeout=45000)
                 detail_page.wait_for_timeout(600)
                 pdf_url = find_pdf_url_on_page(detail_page)
+                clean_url = pdf_url.split("file=")[-1]
             except Exception as ex:
                 print("  Error opening detail page:", ex)
                 pdf_url = None
@@ -263,7 +264,7 @@ def main():
                 "date": date,
                 "title": title,
                 "link": link,
-                "pdf_link": pdf_url or "",
+                "pdf_link": clean_url or "",
                 "pdf_filename": pdf_filename,
                 "pdf_downloaded": "no",
                 "created_at": created_at,
