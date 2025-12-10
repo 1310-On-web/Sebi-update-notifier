@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-sebi_make_two_csvs.py
+sebi_make_two_csvs.py (modified)
 - Use: run in GitHub Actions (Playwright browsers installed)
 - Produces:
-    - sebi_master.csv  (full canonical list)
-    - new_entries.csv  (only newly discovered rows this run)
+    - sebi_master.csv  (full canonical list)  <-- unchanged behavior
+    - new_entries.json  (only newly discovered rows this run)  <-- replaced CSV with JSON
 - NOTE: script does NOT download PDFs. Power Automate will download them.
 """
 
 from playwright.sync_api import sync_playwright
 from urllib.parse import urljoin, urlparse, unquote
 from pathlib import Path
-import csv, hashlib, re, datetime, os, sys
+import csv, hashlib, re, datetime, os, sys, json
 
 # EDITABLE
 BASE_URL = "https://www.sebi.gov.in/sebiweb/home/HomeAction.do?doListing=yes&sid=1&ssid=7&smid=0"
 NUM_ENTRIES = 10
 MASTER_CSV = "sebi_master.csv"
-NEW_CSV = "new_entries.csv"
+NEW_JSON = "new_entries.json"   # replaced new_entries.csv with JSON output
 CSV_DELIM = "|"
 
 # Helpers
@@ -147,8 +147,6 @@ def load_master_csv(path):
             results.append(r)
     return results
 
-import csv
-
 def write_csv(path: str, rows: list):
     """
     Write rows (list of dicts) to CSV using '|' delimiter, no BOM, LF line endings,
@@ -174,7 +172,6 @@ def write_csv(path: str, rows: list):
             writer.writerow(safe_row)
 
     # Force LF-only newlines (useful if running on Windows runner and you want consistent '\n' on GitHub)
-    # This step is optional; if your runner is linux, csv module already used '\n'.
     try:
         with open(path, "rb") as f:
             data = f.read()
@@ -184,6 +181,27 @@ def write_csv(path: str, rows: list):
     except Exception:
         # if anything goes wrong here, ignore; file already written
         pass
+
+def write_json(path: str, rows: list):
+    """
+    Write rows to a JSON file (UTF-8) as an array of objects.
+    Make sure to normalize values and avoid None.
+    """
+    headers = ["id","date","title","link","pdf_link","pdf_filename","pdf_downloaded","created_at","source_commit"]
+    safe_rows = []
+    for r in rows:
+        safe_row = {k: ("" if r.get(k) is None else r.get(k)) for k in headers}
+        # ensure strings for consistency
+        for k in headers:
+            if safe_row[k] is None:
+                safe_row[k] = ""
+            else:
+                safe_row[k] = str(safe_row[k])
+        safe_row['pdf_filename'] = safe_filename(safe_row.get('pdf_filename', ''), fallback='document.pdf')
+        safe_rows.append(safe_row)
+    # Write pretty JSON (compact is fine too; using indent=2 for readability in repo)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(safe_rows, f, ensure_ascii=False, indent=2)
 
 def main():
     with sync_playwright() as p:
@@ -255,14 +273,16 @@ def main():
             new_entries.append(row)
             existing_titles.add(title_key)
 
-        # Write master and new_entries CSVs
+        # Write master CSV (unchanged)
         print(f"Writing master CSV ({MASTER_CSV}) with {len(new_master)} rows.")
         write_csv(MASTER_CSV, new_master)
-        print(f"Writing new entries CSV ({NEW_CSV}) with {len(new_entries)} rows.")
-        write_csv(NEW_CSV, new_entries)
+
+        # Write new entries as JSON (replaces new_entries.csv)
+        print(f"Writing new entries JSON ({NEW_JSON}) with {len(new_entries)} rows.")
+        write_json(NEW_JSON, new_entries)
 
         browser.close()
-        print("Done. Please commit both CSV files in same commit from your GitHub Action.")
+        print("Done. Please commit both files (sebi_master.csv and new_entries.json) in the same commit from your GitHub Action.")
 
 if __name__ == "__main__":
     main()
