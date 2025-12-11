@@ -57,6 +57,23 @@ SECTIONS = {
 # ---------------------------------------------------
 
 # Helpers
+def normalize_date(date_str):
+    """
+    If date_str is only a year (e.g., '2021'), convert to ISO '2021-01-01'.
+    Otherwise return as-is.
+    """
+    if not date_str:
+        return date_str
+
+    s = date_str.strip()
+
+    # match exactly a 4-digit year
+    if re.fullmatch(r"\d{4}", s):
+        return f"{s}-01-01"
+
+    return date_str
+
+
 def safe_filename(s: str, fallback: str = "document"):
     if not s:
         s = fallback
@@ -370,7 +387,7 @@ def main():
 
             for e in entries:
                 summary[category]["scanned"] += 1
-                date = e.get("date") or ""
+                date = normalize_date(e.get("date") or "")
                 title = e.get("title") or ""
                 link = e.get("link") or ""
                 title_key = title.strip().lower()
@@ -479,3 +496,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
