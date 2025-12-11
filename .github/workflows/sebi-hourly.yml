@@ -50,7 +50,7 @@ jobs:
         run: |
           echo "Running SEBI scraper..."
           # python sebi_make_two_csvs.py
-          pyhton sebi_multi_section_scraper.py
+          python sebi_multi_section_scraper.py
           echo "Script finished with exit code $?"
 
       - name: Commit and push CSVs if changed
